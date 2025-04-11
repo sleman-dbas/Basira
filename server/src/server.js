@@ -20,9 +20,9 @@ const corsOptions = {
 };
 
 // Use CORS and JSON middleware
+server.use(express.json());
 server.use(cors(corsOptions));
 server.use(express.urlencoded({ extended: true }));
-server.use(express.json());
 
 
 
@@ -32,7 +32,7 @@ const studntRouts = require('./routes/Users_mangment/Students_mangment.router');
 
 
 // Set up routes
-// server.use('/api/students',studntRouts);
+server.use('/api/students',studntRouts);
 
 
 
@@ -41,6 +41,8 @@ const studntRouts = require('./routes/Users_mangment/Students_mangment.router');
 
 
 // MongoDB connection
+
+console.log(process.env.MONGO_URI);
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
