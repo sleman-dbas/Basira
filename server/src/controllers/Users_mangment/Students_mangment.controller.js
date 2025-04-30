@@ -7,7 +7,6 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports.signUpUser = async (req, res,next) => {
-  //How_Did_You_Hare_About_Us HDYHU
   const { email, password , username,EducationLevel,age,gender, studyField, studyYear } = req.body;
 //   let  profile = `uploads/${req.file.filename}`;
     console.log(email);
