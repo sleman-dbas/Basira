@@ -32,7 +32,7 @@ module.exports.signUpUser = async (req, res,next) => {
   });
   return res.status(201).json({status:true,message:'success..! you should receive a mail',data:null});
 
-};
+};  
 
 module.exports.login = async (req,res,next)=>{
   const {email,password} = req.body
@@ -85,7 +85,7 @@ module.exports.login = async (req,res,next)=>{
       return next(error)
   }
 }; 
-
+ 
 const findUserByEmail = async (email) => {
   const user = await Students.findOne({
     email,
