@@ -64,9 +64,13 @@ const userSchema = new mongoose.Schema({
     },
     studyYear:{
         type:Number
-    }
+    },
+    isVolunteer: {
+         type: Boolean,
+         default: false
+    }, 
 });
 
 
-let Students = mongoose.model('Students',userSchema,'students'); 
-module.exports = Students ; 
+let Users = mongoose.model('Users',userSchema,'users'); 
+module.exports = Users ; 

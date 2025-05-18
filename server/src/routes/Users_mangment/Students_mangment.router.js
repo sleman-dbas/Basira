@@ -1,6 +1,7 @@
 const express = require('express');
 const routes = express.Router();
-const auth_controller = require('../../controllers/Users_mangment/Students_mangment.controller')
+const authStudnts_controller = require('../../controllers/Users_mangment/Students_mangment.controller')
+const authUsers_controller = require('../../controllers/Users_mangment/Users_mangment.controller')
 const verify_token  = require('../../middelWare/verifyToken')
 const {localvariables} = require('../../utils/generateOTP')
 // const multer = require('multer')
@@ -35,19 +36,8 @@ const {localvariables} = require('../../utils/generateOTP')
 // })
 // const upload = multer().any(); 
 
-routes.route('/register').post(auth_controller.signUpUser);
-// routes.route('/login').post(auth_controller.login);
-// routes.route('/generateOTP').post(localvariables,auth_controller.generateOTP);
-// routes.route('/checkOTP').post(auth_controller.checkOTP);
-// routes.route('/verifyOTP').post(auth_controller.verifyOTP);
-// routes.route('/updateUser').post(verify_token,checkSuspendStatus,uploads.single('profile'),auth_controller.updatedUser);
-// routes.route('/resetPassword').post(auth_controller.resetPassword);
-// routes.route('/forgetPassword').post(auth_controller.generateOTP);
-// routes.route('/getUserByEmail').post(auth_controller.getUserByEmail);
-// routes.route('/logout').post(verify_token,auth_controller.logout);
-// routes.route('/education_levels').get(verify_token,auth_controller.education_levels);
-// routes.route('/Vibe').get(verify_token,auth_controller.Vibe);
-// routes.route('/getNationality').get(verify_token,auth_controller.getNationality);
+routes.route('/register').post(authStudnts_controller.signUpStudnts);
+
 
 
 module.exports = routes ;
