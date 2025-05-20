@@ -133,7 +133,7 @@ const deleteVolunteer = async (req, res, next) => {
   const userId = req.params.userId;
   try {
     const deletedVolunteer = await Users.findByIdAndDelete(userId);
-    res.status(200).json();
+    res.status(200).json({ status: true, message: 'تمت عملية الحذف بنجاح', data: null });
   } catch (error) {
     next(appError.create(error.message, 400, false));
   }
@@ -145,6 +145,7 @@ const changeActiveStatus = async (req, res, next) => {
     const changedStatusUser = await Users.findById(userId);
     changedStatusUser.active = true;
     await changedStatusUser.save();
+    res.status(200).json({ status: true, message: 'تمت عملية التعديل بنجاح', data: changedStatusUser });
   } catch (error) {
     next(appError.create(error.message, 400, false));
   }
@@ -166,7 +167,6 @@ const changeActiveStatus = async (req, res, next) => {
 // };
 module.exports = {
   addVolunteer,
-  findUserByEmail,
   getAllVolunteers,
   deleteVolunteer,
   changeActiveStatus

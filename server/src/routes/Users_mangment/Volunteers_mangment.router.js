@@ -37,6 +37,9 @@ const volunteersMangmentController = require("../../controllers/Users_mangment/V
 // const upload = multer().any(); 
 
 routes.route('/add-volunteer').post(volunteersMangmentController.addVolunteer);
+routes.route('/get-all-volunteers').get(volunteersMangmentController.getAllVolunteers);
+routes.route('/delete-volunteer/:userId').delete(volunteersMangmentController.deleteVolunteer);
+routes.route('/change-active-status/:userId').get(volunteersMangmentController.changeActiveStatus);
 
 
 module.exports = routes ;
