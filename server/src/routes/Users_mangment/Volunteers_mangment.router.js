@@ -2,7 +2,8 @@ const express = require('express');
 const routes = express.Router();
 const authVolunteers_controller = require('../../controllers/Users_mangment/Volunteers_mangment.contrller')
 const verify_token  = require('../../middelWare/verifyToken')
-const {localvariables} = require('../../utils/generateOTP')
+const { localvariables } = require('../../utils/generateOTP')
+const volunteersMangmentController = require("../../controllers/Users_mangment/Volunteers_mangment.contrller");
 // const multer = require('multer')
 // const appError = require('../utils/handleError');
 // const checkSuspendStatus = require('../middleWare/suspendedUsers');
@@ -35,8 +36,7 @@ const {localvariables} = require('../../utils/generateOTP')
 // })
 // const upload = multer().any(); 
 
-routes.route('/register').post(authVolunteers_controller.signUpVolunteer);
-
+routes.route('/add-volunteer').post(volunteersMangmentController.addVolunteer);
 
 
 module.exports = routes ;

@@ -45,10 +45,10 @@ const userSchema = new mongoose.Schema({
     active: {
         type: Boolean,
         default: false,
-      },
+    },
     role: {
-         type: String, required: true, enum: ['superAdmin', 'admin', 'employee', 'user'] ,
-         default:'user'
+        type: String, required: true, enum: ['superAdmin', 'admin', 'employee', 'user'] ,
+        default:'user'
     },
     permissions: { type: [String], default: [] }, 
 
