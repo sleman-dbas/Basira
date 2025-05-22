@@ -170,7 +170,7 @@ const getAllVolunteers = async (req, res, next) => {
     const volunteers = await Users.find({ isVolunteer: true });
     return res.status(200).json({ status: true, message: 'All volunteers', data: volunteers });
   } catch (error) {
-    next(appError.create(error.message, 400, false));
+    return next(appError.create(error.message, 400, false));
   }
 };
 
@@ -178,9 +178,12 @@ const deleteVolunteer = async (req, res, next) => {
   const userId = req.params.userId;
   try {
     const deletedVolunteer = await Users.findByIdAndDelete(userId);
+    if (!deletedVolunteer) {
+      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
+    }
     res.status(200).json({ status: true, message: 'تمت عملية الحذف بنجاح', data: null });
   } catch (error) {
-    next(appError.create(error.message, 400, false));
+    return next(appError.create(error.message, 400, false));
   }
 };
 
@@ -188,11 +191,34 @@ const changeActiveStatus = async (req, res, next) => {
   const userId = req.params.userId;
   try {
     const changedStatusUser = await Users.findById(userId);
+    if (!changedStatusUser) {
+      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
+    }
     changedStatusUser.active = true;
     await changedStatusUser.save();
     res.status(200).json({ status: true, message: 'تمت عملية التعديل بنجاح', data: changedStatusUser });
   } catch (error) {
     next(appError.create(error.message, 400, false));
+  }
+};
+const displayVolunteerStatistics = async (req, res, next) => {
+  try {
+    //1 take the volunteer id
+    const userId = req.params.userId;
+    //2 find the volunteer 
+    const user = await Users.findById(userId);
+    //3 check if the user is found
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
+    }
+    //4 find the statistics to this volunteer
+    const statistics = await Volunteers.findOne({ userId: userId });
+    // console.log(statistic);
+    //5 return completed files statistic to the volunteer
+    const completedFilesStatistic = statistics.completedFiles;
+    res.status(200).json({ status: true, message: 'تمت العملية بنجاح , احصاحية الملفات المكتملة : ', data: completedFilesStatistic })
+  } catch (error) {
+    return next(appError.create(error.message, 400, false));
   }
 };
 // // تحديث سجل الملف لربط المتطوع به
@@ -215,5 +241,6 @@ module.exports = {
   getAllVolunteers,
   deleteVolunteer,
   changeActiveStatus,
-  upload
+  upload,
+  displayVolunteerStatistics
 };
