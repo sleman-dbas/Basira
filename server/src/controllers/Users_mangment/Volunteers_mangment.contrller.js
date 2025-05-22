@@ -7,61 +7,106 @@ const {generateOTP}  = require('../../utils/generateOTP');
 const { sendMail } = require('../../utils/sendMail');
 const multer = require("multer");
 const path = require('path');
+const fs = require("fs");
+// إعداد `multer` لرفع الملفات
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+      const uploadPath = 'uploads/';
+      if (!fs.existsSync(uploadPath)) {
+          fs.mkdirSync(uploadPath);
+      }
+      cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+      cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+  if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+  } else {
+      cb(new Error('نوع الملف غير مدعوم! فقط الصور وملفات PDF مسموحة'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // الحد الأقصى لحجم الملف (5MB)
+  fileFilter: fileFilter
+});
+
 
 const addVolunteer = async (req, res, next) => {
-    const { email, password, username, EducationLevel, age, gender, studyField, studyYear } = req.body;
+  try {
+      const { email, password, username, EducationLevel, age, gender, studyField, studyYear } = req.body;
+      const file = req.file; // الملف المرفوع
 
-    // التحقق مما إذا كان البريد الإلكتروني موجودًا مسبقًا
-    const isExisting = await findUserByEmail(email);
-    if (isExisting) {
-        const errors = ['البريد الإلكتروني موجود بالفعل'];
-        const error = appError.create(errors[0], 422, false, errors);
-        return next(error);
-    }
+      if (!file) {
+          const errors = ['يجب رفع ملف!'];
+          return next(appError.create(errors[0], 400, false, errors));
+      }
 
-    // إنشاء المستخدم الجديد
-    const newUser = await createUser(email, password, username, EducationLevel, age, gender, studyField, studyYear);
-    if (!newUser) {
-        const errors = ['تعذر إنشاء المستخدم الجديد'];
-        const error = appError.create(errors[0], 400, false, errors);
-        return next(error);
-    }
+      // التحقق مما إذا كان البريد الإلكتروني موجودًا مسبقًا
+      const isExisting = await findUserByEmail(email);
+      if (isExisting) {
+          const errors = ['البريد الإلكتروني موجود بالفعل'];
+          return next(appError.create(errors[0], 422, false, errors));
+      }
 
-    // تسجيل المتطوع وربطه بالمستخدم
-    const newVolunteer = await createVolunteer(newUser._id);
-    if (!newVolunteer) {
-        const errors = ['تعذر إنشاء سجل المتطوع'];
-        const error = appError.create(errors[0], 400, false, errors);
-        return next(error);
-    };
+      // إنشاء المستخدم الجديد
+      const newUser = await createUser(email, password, username, EducationLevel, age, gender, studyField, studyYear);
+      if (!newUser) {
+          const errors = ['تعذر إنشاء المستخدم الجديد'];
+          return next(appError.create(errors[0], 400, false, errors));
+      }
 
+      // تسجيل المتطوع وربطه بالمستخدم + تخزين مسار الملف
+      const newVolunteer = await createVolunteer(newUser._id, file.path);
+      if (!newVolunteer) {
+          const errors = ['تعذر إنشاء سجل المتطوع'];
+          return next(appError.create(errors[0], 400, false, errors));
+      }
 
-    req.app.locals.OTP = generateOTP();
-    await sendMail({
-        to: email,
-        OTP: req.app.locals.OTP,
-    });
+      // إنشاء رمز OTP وإرساله بالبريد الإلكتروني
+      req.app.locals.OTP = generateOTP();
+      await sendMail({
+          to: email,
+          OTP: req.app.locals.OTP,
+      });
 
-    return res.status(201).json({ status: true, message: 'تمت العملية بنجاح! يجب أن تتلقى بريدًا إلكترونيًا', data: null });
+      return res.status(201).json({
+          status: true,
+          message: 'تمت العملية بنجاح! يجب أن تتلقى بريدًا إلكترونيًا',
+          data: { filePath: file.path } // تضمين المسار في الاستجابة
+      });
+
+  } catch (error) {
+      return next(appError.create('حدث خطأ أثناء تنفيذ العملية', 500, false, [error.message]));
+  }
 };
 
 // إنشاء سجل المتطوع وربطه بالمستخدم
-const createVolunteer = async (userId) => {
+const createVolunteer = async (userId, filePath) => {
     const newVolunteer = new Volunteers({
-      userId,
-      completedFiles: [], // الملفات المنجزة
-      pendingFiles: [], // الملفات غير المنجزة
-      waitingFiles: [] // الملفات المنتظرة
+        userId,
+        examFilePath: filePath, // تخزين مسار الملف داخل قاعدة البيانات
+        completedFiles: [], // الملفات المنجزة
+        pendingFiles: [], // الملفات غير المنجزة
+        waitingFiles: [] // الملفات المنتظرة
     });
-  
+
     try {
-      await newVolunteer.save();
-      return newVolunteer;
+        await newVolunteer.save();
+        return newVolunteer;
     } catch (error) {
-      console.log(error);
-      return false;
+        console.error(error);
+        return false;
     }
 };
+
+module.exports = { createVolunteer };
 
 const createUser = async (email, password, username, EducationLevel, age, gender, studyField, studyYear, next) => {
   try {
@@ -169,5 +214,6 @@ module.exports = {
   addVolunteer,
   getAllVolunteers,
   deleteVolunteer,
-  changeActiveStatus
-}
+  changeActiveStatus,
+  upload
+};

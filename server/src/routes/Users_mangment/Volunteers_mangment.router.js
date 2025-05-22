@@ -4,7 +4,7 @@ const authVolunteers_controller = require('../../controllers/Users_mangment/Volu
 const verify_token  = require('../../middelWare/verifyToken')
 const { localvariables } = require('../../utils/generateOTP')
 const volunteersMangmentController = require("../../controllers/Users_mangment/Volunteers_mangment.contrller");
-// const multer = require('multer')
+const multer = require('multer');
 // const appError = require('../utils/handleError');
 // const checkSuspendStatus = require('../middleWare/suspendedUsers');
 
@@ -36,7 +36,7 @@ const volunteersMangmentController = require("../../controllers/Users_mangment/V
 // })
 // const upload = multer().any(); 
 
-routes.route('/add-volunteer').post(volunteersMangmentController.addVolunteer);
+routes.route('/add-volunteer').post(volunteersMangmentController.upload.single('file'), volunteersMangmentController.addVolunteer);
 routes.route('/get-all-volunteers').get(volunteersMangmentController.getAllVolunteers);
 routes.route('/delete-volunteer/:userId').delete(volunteersMangmentController.deleteVolunteer);
 routes.route('/change-active-status/:userId').get(volunteersMangmentController.changeActiveStatus);
