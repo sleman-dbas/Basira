@@ -17,7 +17,7 @@ module.exports.login = async (req,res,next)=>{
   }
   
   
-  const user = await Users.findOne({email:email})
+  const user = await User.findOne({email:email})
   
   if(!user){
     const errors = ['user not found']
@@ -48,7 +48,7 @@ module.exports.login = async (req,res,next)=>{
 }; 
  
 const findUserByEmail = async (email) => {
-  const user = await Users.findOne({
+  const user = await User.findOne({
     email,
   });
   if (!user) {
@@ -61,7 +61,7 @@ const createUser = async (email,password,username,EducationLevel,age,gender,stud
     
   const hashedPassword =  bcryptjs.hashSync(password,10);
     
-  const newUser = new Users({
+  const newUser = new User({
     email,
     password: hashedPassword,
     age,

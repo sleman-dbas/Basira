@@ -40,7 +40,8 @@ routes.route('/add-volunteer').post(volunteersMangmentController.upload.single('
 routes.route('/get-all-volunteers').get(volunteersMangmentController.getAllVolunteers);
 routes.route('/delete-volunteer/:userId').delete(volunteersMangmentController.deleteVolunteer);
 routes.route('/change-active-status/:userId').get(volunteersMangmentController.changeActiveStatus);
-routes.route('/display-volunteer-statistic/:userId').get(volunteersMangmentController.displayVolunteerStatistics);
+routes.route('/display-volunteer-completed-files/:userId').get(volunteersMangmentController.displayVolunteerCompletedFiles);
+routes.route('/display-volunteer-waiting-files/:userId').get(volunteersMangmentController.displayVolunteerWaitingFiles);
 
 
 module.exports = routes ;

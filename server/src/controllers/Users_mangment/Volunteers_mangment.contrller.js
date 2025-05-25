@@ -23,17 +23,28 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-  if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-  } else {
-      cb(new Error('نوع الملف غير مدعوم! فقط الصور وملفات PDF مسموحة'), false);
-  }
+    const allowedTypes = [
+        'audio/mpeg', // MP3
+        'audio/mp4', // MP4 (يستخدم للصوت والفيديو)
+        'audio/x-m4a', // M4A
+        'audio/wav', // WAV
+        'audio/ogg', // OGG
+        'audio/flac', // FLAC
+        'audio/aac', // AAC
+        'audio/x-ms-wma', // WMA
+        'audio/x-matroska' // MKA (Matroska audio)
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('نوع الملف غير مدعوم! فقط ملفات الصوت الشهيرة مسموحة'), false);
+    }
 };
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // الحد الأقصى لحجم الملف (5MB)
+  limits: { fileSize: 20 * 1024 * 1024 }, // الحد الأقصى لحجم الملف (20MB)
   fileFilter: fileFilter
 });
 
@@ -201,7 +212,7 @@ const changeActiveStatus = async (req, res, next) => {
     next(appError.create(error.message, 400, false));
   }
 };
-const displayVolunteerStatistics = async (req, res, next) => {
+const displayVolunteerCompletedFiles = async (req, res, next) => {
   try {
     //1 take the volunteer id
     const userId = req.params.userId;
@@ -217,6 +228,26 @@ const displayVolunteerStatistics = async (req, res, next) => {
     //5 return completed files statistic to the volunteer
     const completedFilesStatistic = statistics.completedFiles;
     res.status(200).json({ status: true, message: 'تمت العملية بنجاح , احصاحية الملفات المكتملة : ', data: completedFilesStatistic })
+  } catch (error) {
+    return next(appError.create(error.message, 400, false));
+  }
+};
+const displayVolunteerWaitingFiles = async (req, res, next) => {
+  try {
+    //1 take the volunteer id
+    const userId = req.params.userId;
+    //2 find the volunteer 
+    const user = await Users.findById(userId);
+    //3 check if the user is found
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
+    }
+    //4 find the statistics to this volunteer
+    const statistics = await Volunteers.findOne({ userId: userId });
+    // console.log(statistic);
+    //5 return completed files statistic to the volunteer
+    const waitingFilesStatistic = statistics.pendingFiles;
+    res.status(200).json({ status: true, message: 'تمت العملية بنجاح , احصاحية الملفات غير المكتملة : ', data: waitingFilesStatistic });
   } catch (error) {
     return next(appError.create(error.message, 400, false));
   }
@@ -242,5 +273,6 @@ module.exports = {
   deleteVolunteer,
   changeActiveStatus,
   upload,
-  displayVolunteerStatistics
+  displayVolunteerCompletedFiles,
+  displayVolunteerWaitingFiles
 };
