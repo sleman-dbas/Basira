@@ -244,10 +244,9 @@ const displayVolunteerWaitingFiles = async (req, res, next) => {
     }
     //4 find the statistics to this volunteer
     const statistics = await Volunteers.findOne({ userId: userId });
-    // console.log(statistic);
     //5 return completed files statistic to the volunteer
-    const waitingFilesStatistic = statistics.pendingFiles;
-    res.status(200).json({ status: true, message: 'تمت العملية بنجاح , احصاحية الملفات غير المكتملة : ', data: waitingFilesStatistic });
+    const waitingFilesStatistic = statistics.waitingFiles;
+    res.status(200).json({ status: true, message: 'تمت العملية بنجاح , احصائية الملفات غير المكتملة : ', data: waitingFilesStatistic });
   } catch (error) {
     return next(appError.create(error.message, 400, false));
   }
