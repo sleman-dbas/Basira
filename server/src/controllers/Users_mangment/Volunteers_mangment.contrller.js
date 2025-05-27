@@ -176,42 +176,7 @@ const findUserByEmail = async (email) => {
     return user;
 };
 
-const getAllVolunteers = async (req, res, next) => {
-  try {
-    const volunteers = await Users.find({ isVolunteer: true });
-    return res.status(200).json({ status: true, message: 'All volunteers', data: volunteers });
-  } catch (error) {
-    return next(appError.create(error.message, 400, false));
-  }
-};
 
-const deleteVolunteer = async (req, res, next) => {
-  const userId = req.params.userId;
-  try {
-    const deletedVolunteer = await Users.findByIdAndDelete(userId);
-    if (!deletedVolunteer) {
-      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
-    }
-    res.status(200).json({ status: true, message: 'تمت عملية الحذف بنجاح', data: null });
-  } catch (error) {
-    return next(appError.create(error.message, 400, false));
-  }
-};
-
-const changeActiveStatus = async (req, res, next) => {
-  const userId = req.params.userId;
-  try {
-    const changedStatusUser = await Users.findById(userId);
-    if (!changedStatusUser) {
-      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
-    }
-    changedStatusUser.active = true;
-    await changedStatusUser.save();
-    res.status(200).json({ status: true, message: 'تمت عملية التعديل بنجاح', data: changedStatusUser });
-  } catch (error) {
-    next(appError.create(error.message, 400, false));
-  }
-};
 const displayVolunteerCompletedFiles = async (req, res, next) => {
   try {
     //1 take the volunteer id
@@ -251,26 +216,9 @@ const displayVolunteerWaitingFiles = async (req, res, next) => {
     return next(appError.create(error.message, 400, false));
   }
 };
-// // تحديث سجل الملف لربط المتطوع به
-// const updateFileAssignment = async (fileId, volunteerId, receivedAt, requiredDuration) => {
-//   try {
-//     const updatedFile = await Files.findByIdAndUpdate(fileId, {
-//       completedBy: volunteerId,
-//       receivedAt,
-//       requiredDuration
-//     }, { new: true });
 
-//     return updatedFile;
-//   } catch (error) {
-//     console.log(error);
-//     return false;
-//   }
-// };
 module.exports = {
   addVolunteer,
-  getAllVolunteers,
-  deleteVolunteer,
-  changeActiveStatus,
   upload,
   displayVolunteerCompletedFiles,
   displayVolunteerWaitingFiles

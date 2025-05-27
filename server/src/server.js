@@ -31,6 +31,7 @@ const studntRouts = require('./routes/Users_mangment/Students_mangment.router');
 const userRoutes = require('./routes/Users_mangment/Users_mangment.router'); 
 const volunteerRoutes = require('./routes/Users_mangment/Volunteers_mangment.router'); 
 const studentsFileRoutes = require('./routes/Users_Files/Students_Files.routes'); 
+const employeeFileRoutes = require('./routes/Employee_managment/employee.routes'); 
 
 
 
@@ -39,6 +40,7 @@ server.use('/api/students',studntRouts);
 server.use('/api/users',userRoutes);
 server.use('/api/volunteers',volunteerRoutes);
 server.use('/api/student-files',studentsFileRoutes);
+server.use('/api/employee',employeeFileRoutes);
 
 
 
