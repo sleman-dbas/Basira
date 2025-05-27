@@ -10,7 +10,10 @@ const fileSchema = new mongoose.Schema({
     receivedAt: { type: Date, required: true }, // وقت استلام الملف
     deliveredAt: { type: Date }, // وقت تسليم الملف
     requiredDuration: { type: Number, required: true }, // المدة المطلوبة لإنجاز المهمة
-    urgent: { type: Boolean, default: false } // هل الملف مستعجل؟
+    urgent: { type: Boolean, default: false }, // هل الملف مستعجل؟
+    filePath: {
+        type: String
+    }
 });
 
 let Files = mongoose.model('Files', fileSchema, 'files');
