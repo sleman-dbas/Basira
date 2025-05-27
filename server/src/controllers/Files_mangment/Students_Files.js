@@ -29,5 +29,5 @@ module.exports.uploadFile = async (req, res, next) => {
         const errorObj = appError.create(errors[0], 400, false, errors);
         return next(errorObj);
     }
-  };
+};
   

@@ -25,14 +25,14 @@ module.exports.signUpStudnts = async (req, res,next) => {
     const error = appError.create(errors[0],400,false,errors)
     return next(error)
   }
-  req.app.locals.OTP =  generateOTP();
-  console.log(req.app.locals.OTP );
+  // req.app.locals.OTP =  generateOTP();
+  // console.log(req.app.locals.OTP );
   
-  await sendMail({
-    to: email,
-    OTP: req.app.locals.OTP,
-  });
-  return res.status(201).json({status:true,message:'success..! you should receive a mail',data:null});
+  // await sendMail({
+  //   to: email,
+  //   OTP: req.app.locals.OTP,
+  // });
+  return res.status(201).json({status:true,message:'success..! ',data:newUser});
 
 };  
 
@@ -58,7 +58,8 @@ const createUser = async (email,password,username,EducationLevel,age,gender,stud
     username,
     gender,
     studyField,
-    studyYear
+    studyYear,
+    active:true
   });
   if (!newUser) {
     return false;

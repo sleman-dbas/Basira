@@ -37,11 +37,13 @@ const multer = require('multer');
 // const upload = multer().any(); 
 
 routes.route('/add-volunteer').post(volunteersMangmentController.upload.single('file'), volunteersMangmentController.addVolunteer);
+// this should be on admin folder 
 routes.route('/get-all-volunteers').get(volunteersMangmentController.getAllVolunteers);
 routes.route('/delete-volunteer/:userId').delete(volunteersMangmentController.deleteVolunteer);
 routes.route('/change-active-status/:userId').get(volunteersMangmentController.changeActiveStatus);
+
 routes.route('/display-volunteer-completed-files/:userId').get(volunteersMangmentController.displayVolunteerCompletedFiles);
 routes.route('/display-volunteer-waiting-files/:userId').get(volunteersMangmentController.displayVolunteerWaitingFiles);
-
+routes.route('/stats/:userId').get(volunteersMangmentController.displayVolunteerStatistic);
 
 module.exports = routes ;

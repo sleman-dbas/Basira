@@ -13,7 +13,8 @@ const corsOptions = {
     credentials: true,
     cors: {
       origin: [
-        "https://localhost",
+        "http://localhost",
+        "*"
       ],
       methods: ["GET", "POST"]
     }
@@ -61,6 +62,9 @@ server.use((error,req,res,next)=>{
     res.status(error.statusCode || 500).json({status:false ,message:error.message,errors:error.errors , data: null})
 });
 
-server.listen(PORT,()=>{
-    console.log(`server is running on port ${PORT}`)
-})
+// server.listen(PORT,()=>{
+//     console.log(`server is running on port ${PORT}`)
+// })
+server.listen(PORT, '192.168.1.6', () => {
+    console.log(`Server is running on http://192.168.1.6:${PORT}`);
+});

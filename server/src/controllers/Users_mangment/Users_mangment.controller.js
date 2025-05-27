@@ -5,7 +5,7 @@ const  User = require('../../models/Users');
 const generateJwt = require('../../utils/genrateJWT');
 const fs = require('fs');
 const path = require('path');
-
+const appError = require('../../utils/handelError')
  
 
 module.exports.login = async (req,res,next)=>{
@@ -38,6 +38,7 @@ module.exports.login = async (req,res,next)=>{
         user.token=token;
 
         await user.save();
+
         
       return res.status(200).json({status:true,message:"SUCCSESS",data:{user}})
   }else{

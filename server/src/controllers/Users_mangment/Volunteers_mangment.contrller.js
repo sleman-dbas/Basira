@@ -212,6 +212,7 @@ const changeActiveStatus = async (req, res, next) => {
     next(appError.create(error.message, 400, false));
   }
 };
+
 const displayVolunteerCompletedFiles = async (req, res, next) => {
   try {
     //1 take the volunteer id
@@ -232,6 +233,7 @@ const displayVolunteerCompletedFiles = async (req, res, next) => {
     return next(appError.create(error.message, 400, false));
   }
 };
+
 const displayVolunteerWaitingFiles = async (req, res, next) => {
   try {
     //1 take the volunteer id
@@ -252,21 +254,43 @@ const displayVolunteerWaitingFiles = async (req, res, next) => {
     return next(appError.create(error.message, 400, false));
   }
 };
-// // تحديث سجل الملف لربط المتطوع به
-// const updateFileAssignment = async (fileId, volunteerId, receivedAt, requiredDuration) => {
-//   try {
-//     const updatedFile = await Files.findByIdAndUpdate(fileId, {
-//       completedBy: volunteerId,
-//       receivedAt,
-//       requiredDuration
-//     }, { new: true });
 
-//     return updatedFile;
-//   } catch (error) {
-//     console.log(error);
-//     return false;
-//   }
-// };
+const displayVolunteerStatistic = async (req, res, next) => {
+  try {
+    // 1 - الحصول على معرف المتطوع
+    const userId = req.params.userId;
+
+    // 2 - البحث عن المتطوع
+    const user = await Users.findById(userId);
+
+    // 3 - التحقق مما إذا كان المتطوع موجودًا
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
+    }
+
+    // 4 - جلب إحصائيات المتطوع
+    const volunteerStats = await Volunteers.findOne({ userId });
+
+    if (!volunteerStats) {
+      return res.status(404).json({ status: false, message: 'لا توجد بيانات لهذا المتطوع' });
+    }
+
+    // 5 - تجهيز الإحصائيات وإرسالها
+    const statistics = {
+      completedFilesCount: volunteerStats.completedFiles.length,
+      pendingFilesCount: volunteerStats.pendingFiles.length,
+      waitingFilesCount: volunteerStats.waitingFiles.length,
+      examFilePath: volunteerStats.examFilePath || 'لا يوجد ملف اختبار'
+    };
+
+    res.status(200).json({ status: true, message: 'تمت العملية بنجاح', data: statistics });
+  } catch (error) {
+    return next(appError.create(error.message, 400, false));
+  }
+};
+
+
+
 module.exports = {
   addVolunteer,
   getAllVolunteers,
@@ -274,5 +298,6 @@ module.exports = {
   changeActiveStatus,
   upload,
   displayVolunteerCompletedFiles,
-  displayVolunteerWaitingFiles
+  displayVolunteerWaitingFiles,
+  displayVolunteerStatistic
 };
