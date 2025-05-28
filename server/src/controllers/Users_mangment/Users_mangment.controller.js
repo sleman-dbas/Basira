@@ -5,7 +5,7 @@ const  User = require('../../models/Users');
 const generateJwt = require('../../utils/genrateJWT');
 const fs = require('fs');
 const path = require('path');
-
+const appError = require('../../utils/handelError')
  
 
 module.exports.login = async (req,res,next)=>{

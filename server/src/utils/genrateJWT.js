@@ -4,7 +4,7 @@ module.exports= async(payload)=>{
    const token = await  jwt.sign(
     payload,
     process.env.JWT_SECRET,
-    {expiresIn:'2m'}
+    {expiresIn:'7d'}
     );
 
    return token; 
