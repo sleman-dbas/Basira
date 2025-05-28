@@ -4,6 +4,7 @@ const authVolunteers_controller = require('../../controllers/Users_mangment/Volu
 const verify_token  = require('../../middelWare/verifyToken')
 const { localvariables } = require('../../utils/generateOTP')
 const volunteersMangmentController = require("../../controllers/Users_mangment/Volunteers_mangment.contrller");
+const employeeMangmentController = require('../../controllers/Employee_mangment.js/employee.controller')
 const multer = require('multer');
 // const appError = require('../utils/handleError');
 // const checkSuspendStatus = require('../middleWare/suspendedUsers');

@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "@casl/ability": "^6.7.2",
+    "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -20,7 +21,8 @@
     "multer": "^1.4.5-lts.2",
     "nodemailer": "^6.10.0",
     "otp-generator": "^4.0.1",
-    "validator": "^13.15.0"
+    "validator": "^13.15.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
