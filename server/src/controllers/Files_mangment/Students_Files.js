@@ -82,6 +82,7 @@ const uploadFile = async (req, res, next) => {
         return next(errorObj);
     }
   };
+  
 module.exports = {
     uploadFile,
     upload

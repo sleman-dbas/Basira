@@ -43,6 +43,8 @@ routes.route('/delete-volunteer/:userId').delete(employeeMangmentController.dele
 routes.route('/change-active-status/:userId').get(employeeMangmentController.changeActiveStatus);
 routes.route('/display-volunteer-completed-files/:userId').get(volunteersMangmentController.displayVolunteerCompletedFiles);
 routes.route('/display-volunteer-waiting-files/:userId').get(volunteersMangmentController.displayVolunteerWaitingFiles);
+routes.route('/display-volunteer-Statistic/:userId').get(volunteersMangmentController.displayVolunteerStatistic);
+routes.route('/export-volunteer-Statistic/:userId').get(volunteersMangmentController.exportVolunteerStatistic);
 
 
 module.exports = routes ;
