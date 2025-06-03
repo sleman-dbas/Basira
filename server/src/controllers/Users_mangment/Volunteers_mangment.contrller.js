@@ -113,7 +113,7 @@ const upload = multer({
 
 const addVolunteer = async (req, res, next) => {
   try {
-    const { email, password, username, EducationLevel, age, gender, studyField, studyYear } = req.body;
+    const { email, password, username, EducationLevel, age, gender, studyField, studyYear, telegramId, preferredRegistrationTime, registrationSection, knownLanguages, readingInterests } = req.body;
     const file = req.file;
 
     if (!file) {
@@ -133,13 +133,15 @@ const addVolunteer = async (req, res, next) => {
     }
 
     // تسجيل المتطوع وربطه بالمستخدم + تخزين مسار الملف
-    const newVolunteer = await createVolunteer(newUser._id, file.path);
+    const newVolunteer = await createVolunteer(newUser._id, file.path, telegramId, preferredRegistrationTime, registrationSection, knownLanguages, readingInterests);
     if (!newVolunteer) {
       return next(appError.create('تعذر إنشاء سجل المتطوع', 400, false));
     }
 
     // إنشاء رمز OTP وإرساله بالبريد الإلكتروني
     req.app.locals.OTP = generateOTP();
+    console.log(req.app.locals.OTP);
+    
     await sendMail({ to: email, OTP: req.app.locals.OTP });
 
     return res.status(201).json({
@@ -154,10 +156,15 @@ const addVolunteer = async (req, res, next) => {
   }
 };
 
-const createVolunteer = async (userId, filePath) => {
+const createVolunteer = async (userId, filePath, telegramId, preferredRegistrationTime, registrationSection, knownLanguages, readingInterests) => {
     const newVolunteer = new Volunteers({
         userId,
         examFilePath: filePath, // تخزين مسار الملف داخل قاعدة البيانات
+        telegramId, // معرف التلغرام
+        preferredRegistrationTime, // الوقت المفضل للتسجيل
+        registrationSection, // قسم التسجيلات
+        knownLanguages, // اللغات التي يجيدها المتطوع
+        readingInterests, // مجالات القراءة
         completedFiles: [], // الملفات المنجزة
         pendingFiles: [], // الملفات غير المنجزة
         waitingFiles: [] // الملفات المنتظرة
@@ -173,6 +180,7 @@ const createVolunteer = async (userId, filePath) => {
 };
 
 module.exports = { createVolunteer };
+
 
 const createUser = async (email, password, username, EducationLevel, age, gender, studyField, studyYear) => {
   try {

@@ -5,7 +5,8 @@ const  User = require('../../models/Users');
 const generateJwt = require('../../utils/genrateJWT');
 const fs = require('fs');
 const path = require('path');
-const appError = require('../../utils/handelError')
+const appError = require('../../utils/handelError');
+const Users = require('../../models/Users');
  
 
 module.exports.login = async (req,res,next)=>{
@@ -100,7 +101,9 @@ module.exports.generateOTP = async (req,res,next)=>{
 
 module.exports.verifyOTP = async (req,res,next)=>{
   const {email,code} = req.body
-  const user = await User_model.findOne({email:email},"_id FullName username email Nationality CurrentAddress Bios profile EducationLevel age gender Vibe token birthday ")
+  console.log(email,code);
+  
+  const user = await Users.findOne({email:email},"_id FullName username email Nationality CurrentAddress Bios profile EducationLevel age gender Vibe token birthday ")
   
   if(!user){
     const errors = ['user not found']
