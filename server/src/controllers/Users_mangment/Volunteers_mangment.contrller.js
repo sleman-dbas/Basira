@@ -9,6 +9,7 @@ const multer = require("multer");
 const path = require('path');
 const fs = require("fs");
 const XLSX = require('xlsx');
+
 // fluent-ffmpeg
 // إعداد `multer` لرفع الملفات
 const storage = multer.diskStorage({
@@ -51,65 +52,6 @@ const upload = multer({
 });
 
 
-// const addVolunteer = async (req, res, next) => {
-//   try {
-//       const { email, password, username, EducationLevel, age, gender, studyField, studyYear } = req.body;
-//       const file = req.file; // الملف المرفوع
-
-//       if (!file) {
-//           const errors = ['يجب رفع ملف!'];
-//           const error = appError.create(errors[0], 400, false, errors);
-//               return next(error)
-//       }
-
-//       // التحقق مما إذا كان البريد الإلكتروني موجودًا مسبقًا
-//       const isExisting = await findUserByEmail(email);
-//       if (isExisting) {
-//           const errors = ['البريد الإلكتروني موجود بالفعل'];
-//           const error = appError.create(errors[0], 422, false, errors);
-//               return next(error)
-//       }
-
-//       // إنشاء المستخدم الجديد
-//       const newUser = await createUser(email, password, username, EducationLevel, age, gender, studyField, studyYear);
-//       if (!newUser) {
-//           const errors = ['تعذر إنشاء المستخدم الجديد'];
-//           const error = appError.create(errors[0], 400, false, errors);
-//           return next(error)
-//         }
-//         console.log(newUser);
-        
-//       // تسجيل المتطوع وربطه بالمستخدم + تخزين مسار الملف
-//       const newVolunteer = await createVolunteer(newUser._id, file.path);
-//       if (!newVolunteer) {
-//           const errors = ['تعذر إنشاء سجل المتطوع'];
-//           const error= appError.create(errors[0], 400, false, errors);
-//           return next(error)
-//         }
-
-//       // إنشاء رمز OTP وإرساله بالبريد الإلكتروني
-//       req.app.locals.OTP = generateOTP();
-//       await sendMail({
-//           to: email,
-//           OTP: req.app.locals.OTP,
-//       });
-
-//       return res.status(201).json({
-//           status: true,
-//           message: 'تمت العملية بنجاح! يجب أن تتلقى بريدًا إلكترونيًا',
-//           data: { filePath: file.path } // تضمين المسار في الاستجابة
-//       });
-
-//   } catch (err) {
-//     console.log(err);
-    
-//      const  errors =[err.message,'حدث خطأ أثناء تنفيذ العملية']
-//        const error = appError.create(errors, 500, false, errors);
-//       return next(error)
-//     }
-// };
-
-// إنشاء سجل المتطوع وربطه بالمستخدم
 
 const addVolunteer = async (req, res, next) => {
   try {
@@ -179,9 +121,6 @@ const createVolunteer = async (userId, filePath, telegramId, preferredRegistrati
     }
 };
 
-module.exports = { createVolunteer };
-
-
 const createUser = async (email, password, username, EducationLevel, age, gender, studyField, studyYear) => {
   try {
     // التحقق من صحة كلمة المرور
@@ -225,7 +164,6 @@ const createUser = async (email, password, username, EducationLevel, age, gender
   }
 };
 
-
 const findUserByEmail = async (email) => {
     const user = await Users.findOne({
       email,
@@ -236,23 +174,73 @@ const findUserByEmail = async (email) => {
     return user;
 };
 
-
 const displayVolunteerCompletedFiles = async (req, res, next) => {
   try {
-    //1 take the volunteer id
+    // استخراج معرف المتطوع من الطلب
     const userId = req.params.userId;
-    //2 find the volunteer 
+
+    // البحث عن المتطوع في قاعدة البيانات
     const user = await Users.findById(userId);
-    //3 check if the user is found
     if (!user) {
       return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
     }
-    //4 find the statistics to this volunteer
-    const statistics = await Volunteers.findOne({ userId: userId });
-    // console.log(statistic);
-    //5 return completed files statistic to the volunteer
-    const completedFilesStatistic = statistics.completedFiles;
-    res.status(200).json({ status: true, message: 'تمت العملية بنجاح , احصاحية الملفات المكتملة : ', data: completedFilesStatistic })
+
+    // البحث عن سجل المتطوع في قاعدة البيانات
+const volunteerRecord = await Volunteers.findOne({ userId: userId }).populate('completedFiles');
+    if (!volunteerRecord || !volunteerRecord.completedFiles) {
+      return res.status(404).json({ status: false, message: 'لم يتم العثور على ملفات مكتملة لهذا المتطوع' });
+    }
+
+    // استخراج البيانات المطلوبة لكل ملف مكتمل
+    const completedFiles = volunteerRecord.completedFiles.map(file => ({
+      id: file._id,
+      title: file.title,
+      description: file.description,
+      filePath: file.filePath // إضافة المسار الكامل للملف
+    }));
+    
+    // إرسال البيانات إلى العميل
+    res.status(200).json({
+      status: true,
+      message: 'تمت العملية بنجاح، قائمة الملفات المكتملة:',
+      data: completedFiles
+    });
+  } catch (error) {
+    return next(appError.create(error.message, 400, false));
+  }
+};
+
+const displayVolunteerCansledFiles = async (req, res, next) => {
+  try {
+    // استخراج معرف المتطوع من الطلب
+    const userId = req.params.userId;
+
+    // البحث عن المتطوع في قاعدة البيانات
+    const user = await Users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
+    }
+
+    // البحث عن سجل المتطوع في قاعدة البيانات
+const volunteerRecord = await Volunteers.findOne({ userId: userId }).populate('pendingFiles');
+    if (!volunteerRecord || !volunteerRecord.pendingFiles) {
+      return res.status(404).json({ status: false, message: 'لم يتم العثور على ملفات ملغاة لهذا المتطوع' });
+    }
+
+    // استخراج البيانات المطلوبة لكل ملف ملغى
+    const canceledFiles = volunteerRecord.pendingFiles.map(file => ({
+      id: file._id,
+      title: file.title,
+      description: file.description,
+      filePath: file.filePath // إضافة المسار الكامل للملف
+    }));
+
+    // إرسال البيانات إلى العميل
+    res.status(200).json({
+      status: true,
+      message: 'تمت العملية بنجاح، قائمة الملفات الملغاة:',
+      data: canceledFiles
+    });
   } catch (error) {
     return next(appError.create(error.message, 400, false));
   }
@@ -260,19 +248,44 @@ const displayVolunteerCompletedFiles = async (req, res, next) => {
 
 const displayVolunteerWaitingFiles = async (req, res, next) => {
   try {
-    //1 take the volunteer id
+    // استخراج معرف المتطوع من الطلب
     const userId = req.params.userId;
-    //2 find the volunteer 
+
+    // البحث عن المتطوع في قاعدة البيانات
     const user = await Users.findById(userId);
-    //3 check if the user is found
     if (!user) {
       return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
     }
-    //4 find the statistics to this volunteer
-    const statistics = await Volunteers.findOne({ userId: userId });
-    //5 return completed files statistic to the volunteer
-    const waitingFilesStatistic = statistics.waitingFiles;
-    res.status(200).json({ status: true, message: 'تمت العملية بنجاح , احصائية الملفات غير المكتملة : ', data: waitingFilesStatistic });
+
+    // البحث عن سجل المتطوع وجلب الملفات المرتبطة به
+    const volunteerRecord = await Volunteers.findOne({ userId: userId })
+      .populate({
+        path: 'waitingFiles',
+        select: '_id file_type description filePath fileParts'
+      });
+
+
+    if (!volunteerRecord || !volunteerRecord.waitingFiles.length) {
+      return res.status(404).json({ status: false, message: 'لم يتم العثور على ملفات غير مكتملة لهذا المتطوع' });
+    }
+
+    console.log(volunteerRecord);
+
+    // استخراج البيانات المطلوبة لكل ملف غير مكتمل
+    const waitingFiles = volunteerRecord.waitingFiles.map(file => ({
+      id: file._id,
+      file_type: file.file_type,
+      description: file.description,
+      filePath: file.filePath,
+      file_name: file.fileParts.length > 0 ? file.fileParts[0].partName : 'غير متوفر'
+    }));
+
+    // إرسال البيانات إلى العميل
+    res.status(200).json({
+      status: true,
+      message: 'تمت العملية بنجاح، قائمة الملفات غير المكتملة:',
+      data: waitingFiles
+    });
   } catch (error) {
     return next(appError.create(error.message, 400, false));
   }
@@ -377,13 +390,95 @@ const exportVolunteerStatistic = async (req, res, next) => {
   }
 };
 
+// عند تسليم الملف لجعال ال status الخاصة بال user completed وجعل الملف اذا كل المتطوعين انهو عملهم ال status الرئيسية completed
+const updateFilePartStatus = async (fileId, volunteerId) => {
+  try {
+    // تحديث حالة القسم الخاص بالمتطوع إلى 'completed'
+    await Files.updateOne(
+      { _id: fileId, "fileParts.assignedVolunteer": volunteerId },
+      { $set: { "fileParts.$.status": "completed" } }
+    );
+
+    // جلب الملف للتحقق من جميع أجزائه
+    const fileEntry = await Files.findById(fileId);
+    
+    if (!fileEntry) return;
+
+    // التحقق مما إذا كانت جميع أجزاء الملف مكتملة
+    const allPartsCompleted = fileEntry.fileParts.every(part => part.status === "completed");
+
+    if (allPartsCompleted) {
+      await Files.updateOne({ _id: fileId }, { $set: { status: "completed" } });
+    }
+
+  } catch (error) {
+    console.error("خطأ أثناء تحديث حالة القسم:", error.message);
+  }
+};
+
+// بعد الانتهاء من القراء رفع الملف الصوتي 
+const completeFileUpload = async (req, res, next) => {
+  try {
+    const volunteerId = req.params.userId;
+    
+    // البحث عن المتطوع وجلب أول ملف في `waitingFiles`
+    const volunteer = await Volunteers.findOne({ userId: volunteerId });
+    if (!volunteer) {
+      return res.status(404).json({ status: false, message: "المتطوع غير موجود" });
+    }
+
+    if (!volunteer.waitingFiles.length) {
+      return res.status(400).json({ status: false, message: "لا توجد ملفات غير مكتملة للمتطوع" });
+    }
+
+    const fileId = volunteer.waitingFiles[0]; // اختيار أول ملف في القائمة
+    const filePath = req.file.path;
+    
+    console.log(filePath);
+
+    // تحديث بيانات المتطوع: إزالة الملف من `waitingFiles` وإضافته إلى `completedFiles`
+    await Volunteers.updateOne(
+      { userId: volunteerId },
+      {
+        $pull: { waitingFiles: fileId },
+        $push: { completedFiles: fileId }
+      }
+    );
+
+    // استدعاء تحديث حالة القسم للمتطوع بعد رفع الملف
+    await updateFilePartStatus(fileId, volunteerId);
+
+    // في حال جعل الكود لاينتظر الاخر 
+    // // تنفيذ التحديث في الخلفية دون تعطيل العملية الرئيسية
+    // setImmediate(() => updateFilePartStatus(fileId, volunteerId));
+
+
+    res.status(200).json({
+      status: true,
+      message: "تم تحميل الملف وإكمال المهمة بنجاح",
+      fileId: fileId,
+      filePath: filePath
+    });
+
+  } catch (error) {
+    return next(appError.create(error.message, 400, false));
+  }
+};
+
+
+
+
+
 
 
 module.exports = {
   addVolunteer,
   upload,
+  createVolunteer,
   displayVolunteerCompletedFiles,
   displayVolunteerWaitingFiles,
   displayVolunteerStatistic,
-  exportVolunteerStatistic
+  exportVolunteerStatistic,
+  displayVolunteerCansledFiles,
+  completeFileUpload
 };

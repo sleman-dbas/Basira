@@ -6,6 +6,9 @@ const { localvariables } = require('../../utils/generateOTP')
 const volunteersMangmentController = require("../../controllers/Users_mangment/Volunteers_mangment.contrller");
 const employeeMangmentController = require('../../controllers/Employee_mangment.js/employee.controller')
 const multer = require('multer');
+
+const uploadvoice = multer({ dest: 'voices' });
+
 // const appError = require('../utils/handleError');
 // const checkSuspendStatus = require('../middleWare/suspendedUsers');
 
@@ -41,10 +44,12 @@ routes.route('/add-volunteer').post(volunteersMangmentController.upload.single('
 routes.route('/get-all-volunteers').get(employeeMangmentController.getAllVolunteers);
 routes.route('/delete-volunteer/:userId').delete(employeeMangmentController.deleteVolunteer);
 routes.route('/change-active-status/:userId').get(employeeMangmentController.changeActiveStatus);
-routes.route('/display-volunteer-completed-files/:userId').get(volunteersMangmentController.displayVolunteerCompletedFiles);
-routes.route('/display-volunteer-waiting-files/:userId').get(volunteersMangmentController.displayVolunteerWaitingFiles);
+routes.route('/display-volunteer-completed-files/:userId').get(verify_token,volunteersMangmentController.displayVolunteerCompletedFiles);
+routes.route('/display-volunteer-cansled-files/:userId').get(verify_token,volunteersMangmentController.displayVolunteerCansledFiles);
+routes.route('/display-volunteer-waiting-files/:userId').get(verify_token,volunteersMangmentController.displayVolunteerWaitingFiles);
 routes.route('/display-volunteer-Statistic/:userId').get(volunteersMangmentController.displayVolunteerStatistic);
 routes.route('/export-volunteer-Statistic/:userId').get(volunteersMangmentController.exportVolunteerStatistic);
+routes.post('/complete-file/:userId', uploadvoice.single('audioFile'), volunteersMangmentController.completeFileUpload);
 
 
 module.exports = routes ;
