@@ -358,17 +358,6 @@ class PDFProcessor {
 }
 
 
-const downloadFile = (req, res) => {
-    const filePath = path.join(__dirname,"../../../",`temp/${req.params.filename}`);
-    
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.status(404).json({ error: "الملف غير موجود" });
-    }
-};
-
-
 const volunteerManager = new VolunteerManager();
 const pdfProcessor = new PDFProcessor();
 
@@ -2242,6 +2231,5 @@ module.exports = {
     receiveProcessedFile,
     VolunteerManager,
     PDFProcessor,
-    downloadFile,
     getFileForUser
 }

@@ -465,7 +465,15 @@ const completeFileUpload = async (req, res, next) => {
   }
 };
 
-
+const downloadFile = (req, res) => {
+    const filePath = path.join(__dirname,"../../../",`temp/${req.params.filename}`);
+    
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).json({ error: "الملف غير موجود" });
+    }
+};
 
 
 
@@ -480,5 +488,6 @@ module.exports = {
   displayVolunteerStatistic,
   exportVolunteerStatistic,
   displayVolunteerCansledFiles,
-  completeFileUpload
+  completeFileUpload,
+  downloadFile
 };

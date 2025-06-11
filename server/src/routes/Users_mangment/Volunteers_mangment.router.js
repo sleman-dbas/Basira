@@ -50,6 +50,7 @@ routes.route('/display-volunteer-waiting-files/:userId').get(verify_token,volunt
 routes.route('/display-volunteer-Statistic/:userId').get(volunteersMangmentController.displayVolunteerStatistic);
 routes.route('/export-volunteer-Statistic/:userId').get(volunteersMangmentController.exportVolunteerStatistic);
 routes.post('/complete-file/:userId', uploadvoice.single('audioFile'), volunteersMangmentController.completeFileUpload);
+routes.get('/download/:filename', volunteersMangmentController.downloadFile);
 
 
 module.exports = routes ;

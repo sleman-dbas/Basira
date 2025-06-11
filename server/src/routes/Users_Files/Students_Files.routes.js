@@ -21,7 +21,6 @@ const upload = multer({ storage });
 
 routes.route("/user-file-upload").post(verfiy_token,Students_FileController.upload.single("file"), Students_FileController.uploadFile);
 routes.post('/receive_processed_file', upload.single('file'), Students_FileController.receiveProcessedFile);
-routes.get('/download/:filename', Students_FileController.downloadFile);
 routes.get('/download-completed-voices/:userId', Students_FileController.getFileForUser);
 
 module.exports = routes ;
