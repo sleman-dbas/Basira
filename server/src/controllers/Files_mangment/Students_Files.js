@@ -361,7 +361,6 @@ class PDFProcessor {
 const volunteerManager = new VolunteerManager();
 const pdfProcessor = new PDFProcessor();
 
-
 // fun تستخدم لاضافة المتطوعيا تلقائبا 
 const addVolunteers = async (volunteersData) => {
     for (let data of volunteersData) {
