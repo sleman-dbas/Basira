@@ -7,6 +7,7 @@ const multer = require("multer");
 const path = require('path');
 const fs = require("fs");
 const XLSX = require('xlsx');
+const Files = require('../../models/Files');
 // إعداد `multer` لرفع الملفات
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -47,12 +48,31 @@ const upload = multer({
 
 const getAllVolunteers = async (req, res, next) => {
   try {
-    const volunteers = await Users.find({ isVolunteer: true });
-    return res.status(200).json({ status: true, message: 'All volunteers', data: {volunteers,numberOfVolunteers:volunteers.length} });
+    const volunteers = await Volunteers.find()
+      .populate('userId', 'username email active') // جلب بيانات المستخدم المرتبطة
+      .sort({ availableForUrgentFiles: -1 }) // ترتيب المتطوعين بحيث يأتي من يمكنه التعامل مع الملفات المستعجلة أولاً
+      .select('availableDaysForUrgent  waitingFiles joinDate');
+
+    const formattedVolunteers = volunteers.map(volunteer => ({
+      userId:volunteer.userId._id,
+      username: volunteer.userId.username,
+      email: volunteer.userId.email,
+      joinDate: volunteer.joinDate,
+      active: volunteer.userId.active,
+      waitingFilesCount: volunteer.waitingFiles.length,
+      availableDaysForUrgent: volunteer.availableDaysForUrgent
+    }));
+
+    return res.status(200).json({ 
+      status: true, 
+      message: 'All volunteers', 
+      data: { volunteers: formattedVolunteers, numberOfVolunteers: formattedVolunteers.length } 
+    });
   } catch (error) {
     return next(appError.create(error.message, 400, false));
   }
 };
+
 
 const deleteVolunteer = async (req, res, next) => {
   try {
@@ -70,21 +90,31 @@ const deleteVolunteer = async (req, res, next) => {
 const changeActiveStatus = async (req, res, next) => {
   const userId = req.params.userId;
   try {
+    
     const changedStatusUser = await Users.findById(userId);
     if (!changedStatusUser) {
       return res.status(404).json({ status: false, message: 'المتطوع غير موجود' });
     }
-    changedStatusUser.active = true;
+    
+    // تبديل الحالة تلقائيًا
+    changedStatusUser.active = !changedStatusUser.active;
     await changedStatusUser.save();
-    res.status(200).json({ status: true, message: 'تمت عملية التعديل بنجاح', data: changedStatusUser });
+
+    res.status(200).json({ 
+      status: true, 
+      message: 'تم تغيير حالة المتطوع بنجاح', 
+      data: { userId, newStatus: changedStatusUser.active } 
+    });
   } catch (error) {
     next(appError.create(error.message, 400, false));
   }
 };
 
+// api for news 
 const createNews = async (req, res, next) => {
   try {
     const { title, content } = req.body;
+    
     const photo = req.file
     let photoPath = null;
     if (photo) {
@@ -104,9 +134,44 @@ const createNews = async (req, res, next) => {
       data: post
   });
   } catch (error) {
+    
     return next(appError.create('حدث خطأ أثناء تنفيذ العملية', 500, false));
   }
 };
+
+const updateNews = async (req, res, next) => {
+  try {
+    const { title, content } = req.body;
+    const { newId } = req.params;
+    const photo = req.file;
+
+    // جهّز كائن التحديث حسب ما هو متوفّر
+    const updateData = {
+      ...(title && { title }),
+      ...(content && { content }),
+      ...(photo && { photo: photo.path })
+    };
+
+    const updatedPost = await News.findByIdAndUpdate(
+      newId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedPost) {
+      return next(appError.create("تعذر العثور على المنشور لتحديثه", 404, false));
+    }
+
+    res.status(200).json({
+      status: true,
+      message: 'تم تحديث المنشور بنجاح',
+      data: updatedPost
+    });
+  } catch (error) {
+    return next(appError.create('حدث خطأ أثناء تحديث المنشور', 500, false));
+  }
+};
+
 
 const deleteNews = async (req, res, next) => {
   try {
@@ -158,11 +223,11 @@ const getSingleNew = async (req, res, next) => {
   }
 };
 
+// احصائيات المتطوعين 
 const displayAllVolunteersStatistics = async (req, res, next) => {
   try {
     // 1 - جلب جميع المتطوعين
-    const volunteers = await Volunteers.find();
-
+    const volunteers = await Volunteers.find().populate("userId", "username active");
     // 2 - التحقق مما إذا كان هناك متطوعون
     if (!volunteers || volunteers.length === 0) {
       return res.status(404).json({ status: false, message: 'لا يوجد متطوعون' });
@@ -170,11 +235,12 @@ const displayAllVolunteersStatistics = async (req, res, next) => {
 
     // 3 - تجهيز الإحصائيات لكل متطوع
     const statistics = volunteers.map(volunteer => ({
-      userId: volunteer.userId,
+      userId: volunteer.userId._id,
+      username: volunteer.userId.username,
+      active: volunteer.userId.active,
       completedFilesCount: volunteer.completedFiles.length,
       pendingFilesCount: volunteer.pendingFiles.length,
       waitingFilesCount: volunteer.waitingFiles.length,
-      examFilePath: volunteer.examFilePath || 'لا يوجد ملف اختبار'
     }));
 
     // 4 - إرسال الإحصائيات
@@ -253,15 +319,197 @@ const exportAllVolunteersStatistics = async (req, res, next) => {
   }
 };
 
+// عرض الملفات المستعجلة 
+
+// const getUrgentFiles = async (req, res, next) => {
+//     try {
+//         const urgentFiles = await Files.find({ urgent: true }).select('file_type description uploadedAt deliveredAt fileParts');
+
+//         let formattedFiles = [];
+
+//         urgentFiles.forEach(file => {
+//             if (file.fileParts.length > 0) {
+//                 file.fileParts.forEach(part => {
+//                     formattedFiles.push({
+//                         file_type: file.file_type,
+//                         description: file.description,
+//                         uploadedAt: file.uploadedAt,
+//                         deliveredAt: file.deliveredAt,
+//                         partName: part.partName // إظهار اسم الجزء
+//                     });
+//                 });
+//             } else {
+//                 formattedFiles.push({
+//                     file_type: file.file_type,
+//                     description: file.description,
+//                     uploadedAt: file.uploadedAt,
+//                     deliveredAt: file.deliveredAt,
+//                     partName: null // في حال لم يكن هناك تقسيم للملف
+//                 });
+//             }
+//         });
+
+//         res.status(200).json({
+//             status: true,
+//             message: 'تمت العملية بنجاح',
+//             data: formattedFiles
+//         });
+//     } catch (error) {
+//         console.error('Error fetching urgent files:', error);
+//         next(appError.create(error.message, 400, false));
+//     }
+// };
+
+const getUrgentFiles = async (req, res, next) => {
+    try {
+        const urgentFiles = await Files.find({ urgent: true }).select('file_type description uploadedAt deliveredAt fileParts');
+
+        let formattedFiles = [];
+
+        urgentFiles.forEach(file => {
+            file.fileParts.forEach(part => {
+                if (!part.assignedVolunteer) { // التأكد من أن الجزء غير مسند لأي متطوع
+                    formattedFiles.push({
+                        file_type: file.file_type,
+                        description: file.description,
+                        uploadedAt: file.uploadedAt,
+                        deliveredAt: file.deliveredAt,
+                        partName: part.partName // إضافة اسم الجزء غير المسند
+                    });
+                }
+            });
+        });
+
+        res.status(200).json({
+            status: true,
+            message: 'تمت العملية بنجاح',
+            data: formattedFiles
+        });
+    } catch (error) {
+        console.error('Error fetching urgent files:', error);
+        next(appError.create(error.message, 400, false));
+    }
+};
+
+// اعطاء المهمة لمتطوع 
+const assignPartToVolunteer = async (req, res, next) => {
+    const { partName, userId } = req.body;
+
+    try {
+        const updatedFile = await Files.findOneAndUpdate(
+            { "fileParts.partName": partName, "fileParts.assignedVolunteer": null }, // البحث عن الجزء المطلوب غير المسند
+            { $set: { "fileParts.$.assignedVolunteer": userId } }, // تحديث المتطوع لهذا الجزء
+            { new: true } // إرجاع الملف بعد التعديل
+        );
+        await Volunteers.updateOne({userId:userId},{$push:{waitingFiles:updatedFile._id}})
+        if (!updatedFile) {
+            return res.status(404).json({ status: false, message: 'لم يتم العثور على الملف أو أن الجزء مسند بالفعل' });
+        }
+
+        res.status(200).json({
+            status: true,
+            message: `تم إسناد الجزء "${partName}" إلى المتطوع بنجاح`,
+            data: updatedFile
+        });
+
+    } catch (error) {
+        console.error('Error assigning file part:', error);
+        next(appError.create(error.message, 400, false));
+    }
+};
+
+const getVolunteerStatsByName = async (req, res, next) => {
+  try {
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ status: false, message: 'يرجى إدخال اسم المستخدم للبحث' });
+    }
+
+    // جلب المستخدمين الذين تطابق أسماؤهم جزئيًا
+    const users = await Users.find({
+      username: { $regex: new RegExp(username, 'i') }
+    });
+
+    if (!users.length) {
+      return res.status(200).json({ status: true, message: 'لا يوجد مستخدمون مطابقون', data: [] });
+    }
+
+    // جلب المتطوعين المرتبطين بهؤلاء المستخدمين
+    const userIds = users.map(u => u._id);
+    const volunteers = await Volunteers.find({ userId: { $in: userIds } }).populate('userId');
+
+    const statistics = volunteers.map(volunteer => ({
+      userId: volunteer.userId?._id,
+      username: volunteer.userId?.username || 'غير معروف',
+      active: volunteer.userId?.active ?? false,
+      completedFilesCount: volunteer.completedFiles.length,
+      pendingFilesCount: volunteer.pendingFiles.length,
+      waitingFilesCount: volunteer.waitingFiles.length
+    }));
+
+    return res.status(200).json({
+      status: true,
+      message: 'تم العثور على الإحصائيات',
+      data: { statistics, numberOfVolunteers: statistics.length }
+    });
+  } catch (error) {
+    return next(appError.create(error.message, 400, false));
+  }
+};
+
+const getVolunteerInfoByName = async (req, res, next) => {
+  try {
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ status: false, message: 'يرجى إدخال اسم المستخدم للبحث' });
+    }
+
+    // جلب المستخدمين الذين تطابق أسماؤهم جزئيًا
+    const users = await Users.find({
+      username: { $regex: new RegExp(username, 'i') }
+    });
+
+    if (!users.length) {
+      return res.status(200).json({ status: true, message: 'لا يوجد مستخدمون مطابقون', data: [] });
+    }
+
+    // جلب المتطوعين المرتبطين بهؤلاء المستخدمين
+    const userIds = users.map(u => u._id);
+    const volunteers = await Volunteers.find({ userId: { $in: userIds } }).populate('userId');
+
+    const statistics = volunteers.map(volunteer => ({
+      userId: volunteer.userId?._id,
+      username: volunteer.userId?.username || 'غير معروف',
+      active: volunteer.userId?.active ?? false,
+      waitingFilesCount: volunteer.waitingFiles.length,
+      availableDaysForUrgent: volunteer.availableDaysForUrgent
+
+    }));
+
+    return res.status(200).json({
+      status: true,
+      message: 'تم العثور على الإحصائيات',
+      data: { statistics, numberOfVolunteers: statistics.length }
+    });
+  } catch (error) {
+    return next(appError.create(error.message, 400, false));
+  }
+};
+
 module.exports={
     changeActiveStatus,
     getAllVolunteers,
     deleteVolunteer,
     upload,
     createNews,
+    updateNews,
     deleteNews,
     getAllNews,
     getSingleNew,
     displayAllVolunteersStatistics,
-    exportAllVolunteersStatistics
+    exportAllVolunteersStatistics,
+    getUrgentFiles,
+    assignPartToVolunteer,
+    getVolunteerStatsByName,
+    getVolunteerInfoByName
 }

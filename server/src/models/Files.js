@@ -9,8 +9,9 @@ const fileSchema = new mongoose.Schema({
     receivedAt: { type: Date, required: true },
     deliveredAt: { type: Date },
     requiredDuration: { type: Number, required: true },
-    urgent: { type: String, default: "عادي" },
+    urgent: { type: Boolean, default: false },
     filePath: { type: String },
+    voiceName: { type: String },
     assignedUsers: { type: Schema.Types.ObjectId, ref: 'Users' }, // صاحب الملف 
 
     fileParts: [{ 

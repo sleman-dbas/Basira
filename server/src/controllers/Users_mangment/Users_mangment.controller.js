@@ -196,7 +196,7 @@ module.exports.resetPassword = async (req, res,next) => {
     const {email,newpassword} = req.body
 
     try {
-      const user = await User_model.findOne({email:email})
+      const user = await Users.findOne({email:email})
       if (!user) {
         const errors = ['the email doesnt exist']
         const error = appError.create(errors[0],302,false,errors)
@@ -204,7 +204,7 @@ module.exports.resetPassword = async (req, res,next) => {
       }
           bcryptjs.hash(newpassword,10)
             .then(hashedPassword=>{
-              User_model.updateOne({email:user.email},{password:hashedPassword})
+              Users.updateOne({email:user.email},{password:hashedPassword})
                 .then(()=>{
                   req.app.locals.OTP = null ;
                   req.app.locals.resetSesstion = false ; 
@@ -249,7 +249,7 @@ module.exports.logout = async (req,res,next)=>{
 //we use this api for restpassword
 module.exports.checkOTP = async(req,res,next)=>{
   const {email,code} = req.body
-  const user = await User_model.findOne({email:email})
+  const user = await Users.findOne({email:email})
   
   if(!user){
     const errors = ['user not found']

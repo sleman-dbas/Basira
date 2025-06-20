@@ -106,17 +106,25 @@ class VolunteerManager {
 
 async selectVolunteer(file_specialty, isUrgent, file_id) {
     try {
+
         // **جلب جميع المتطوعين النشطين الذين لا يملكون ملفات قيد التنفيذ**
         const volunteers = await Volunteers.find({
             activeVolunteer: true,
             waitingFiles: { $size: 0 }
         });
-
+        
         // **تصفية المتطوعين بناءً على التخصص وحالة الاستعجال**
+        // let eligible = volunteers.filter(v => {
+        //     const specialties = Array.isArray(v.specialties) ? v.specialties : [];
+        //     const specialtyMatch = specialties.includes(file_specialty);
+        //     const urgencyMatch = isUrgent ? v.availableForUrgentFiles : true;
+
+        //     return specialtyMatch && urgencyMatch;
+        // });
         let eligible = volunteers.filter(v => {
             const specialties = Array.isArray(v.specialties) ? v.specialties : [];
             const specialtyMatch = specialties.includes(file_specialty);
-            const urgencyMatch = isUrgent ? v.availableForUrgentFiles : true;
+            const urgencyMatch = !v.availableForUrgentFiles;
 
             return specialtyMatch && urgencyMatch;
         });
@@ -155,14 +163,14 @@ async selectVolunteer(file_specialty, isUrgent, file_id) {
 const uploadFile = async (req, res, next) => {
     const {  description, urgent, file_type } = req.body;
     const file = req.file;
-
+    
     if (!file) {
         return next(appError.create('يجب رفع ملف!', 400, false));
     }
 
     const filePath = req.file.path;
     const receivedAt = new Date();
-    let requiredDuration = urgent ? 3 : 72;
+    let requiredDuration = urgent=="true" ? 3 : 72;
     let deliveredAt = new Date(receivedAt.getTime() + requiredDuration * 60 * 60 * 1000);
     // **إنشاء سجل جديد للملف في قاعدة البيانات**
     const newFile = new Files({
@@ -185,6 +193,32 @@ const uploadFile = async (req, res, next) => {
         // **تقسيم ملف PDF باستخدام `pdfProcessor`**
         const outputFiles = await pdfProcessor.splitPdf(filePath, "temp/output");
 
+        if (urgent=="true") {
+        
+            let results = [];
+            for (let idx = 0; idx < outputFiles.length; idx++) {
+
+                results.push({
+                    part: idx + 1,
+                    file_path: outputFiles[idx]
+                });
+
+                // **تحديث قاعدة البيانات لكل جزء**
+                await Files.findByIdAndUpdate(file_id, {
+                    $push: { fileParts: { partName: outputFiles[idx] } }
+                });
+                
+            }
+
+            return res.status(201).json({ 
+                status: true, 
+                message: "تم رفع وإسناد الملف المستعجل!", 
+                file_id ,
+                results
+            });      
+        }
+
+
         let results = [];
         for (let idx = 0; idx < outputFiles.length; idx++) {
             const volunteer = await volunteerManager.selectVolunteer(file_type, urgent,file_id);
@@ -199,7 +233,7 @@ const uploadFile = async (req, res, next) => {
 
                 // **تحديث قاعدة البيانات لكل جزء**
                 await Files.findByIdAndUpdate(file_id, {
-                    $push: { fileParts: { partName: outputFiles[idx], assignedVolunteer: volunteer._id } }
+                    $push: { fileParts: { partName: outputFiles[idx], assignedVolunteer: volunteer.userId } }
                 });
             }
         }
@@ -2190,36 +2224,62 @@ const volunteersData = [
 
 
 // عند جاهزية الملف يصل للمستخدم للتنزيل 
-const getFileForUser = async (req, res, next) => {
+// const getFileForUser = async (req, res, next) => {
+//   try {
+//     const userId = req.params.userId;
+
+//     // البحث عن الملف الذي يملكه المستخدم
+//     const fileEntry = await Files.findOne({ assignedUsers: userId, status: 'completed' });
+    
+//     if (!fileEntry || !fileEntry.filePath) {
+//       return res.status(404).json({ status: false, message: 'لم يتم العثور على ملف لهذا المستخدم' });
+//     }
+
+//     const originalFilePath = fileEntry.filePath;
+
+//     // التحقق من أن الملف موجود
+//     if (!fs.existsSync(originalFilePath)) {
+//       return res.status(404).json({ status: false, message: 'الملف غير موجود أو تمت إزالته' });
+//     }
+
+//     res.download(originalFilePath, (err) => {
+//       if (err) {
+//         return next(appError.create(err.message, 500, false));
+//       }
+//     });
+
+//   } catch (error) {
+//     return next(appError.create(error.message, 400, false));
+//   }
+// };
+
+const downloadFileUsers = (req, res) => {
+    const filePath = path.join(__dirname,"../../../",`voices/${req.params.filename}`);
+    
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).json({ error: "الملف غير موجود" });
+    }
+};
+
+const getCompletedFilesForUser = async (req, res, next) => {
   try {
     const userId = req.params.userId;
 
-    // البحث عن الملف الذي يملكه المستخدم
-    const fileEntry = await Files.findOne({ assignedUsers: userId, status: 'completed' });
-    
-    if (!fileEntry || !fileEntry.filePath) {
-      return res.status(404).json({ status: false, message: 'لم يتم العثور على ملف لهذا المستخدم' });
+    // البحث عن جميع الملفات المنجزة لهذا المستخدم
+    const completedFiles = await Files.find({ assignedUsers: userId, status: 'completed' },'voiceName file_type description receivedAt uploadedAt');
+
+    if (!completedFiles || completedFiles.length === 0) {
+      return res.status(404).json({ status: false, message: 'لا توجد ملفات منجزة لهذا المستخدم' });
     }
 
-    const originalFilePath = fileEntry.filePath;
-
-    // التحقق من أن الملف موجود
-    if (!fs.existsSync(originalFilePath)) {
-      return res.status(404).json({ status: false, message: 'الملف غير موجود أو تمت إزالته' });
-    }
-
-    res.download(originalFilePath, (err) => {
-      if (err) {
-        return next(appError.create(err.message, 500, false));
-      }
-    });
+    res.json({ status: true, files: completedFiles });
 
   } catch (error) {
     return next(appError.create(error.message, 400, false));
   }
 };
-
-
 
 
 
@@ -2230,5 +2290,6 @@ module.exports = {
     receiveProcessedFile,
     VolunteerManager,
     PDFProcessor,
-    getFileForUser
+    downloadFileUsers,
+    getCompletedFilesForUser
 }

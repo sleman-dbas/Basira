@@ -6,6 +6,7 @@ const volunteerSchema = new mongoose.Schema({
     telegramId: { type: String, required: true },
     preferredRegistrationTime: { type: String }, 
     registrationSection: { type: String }, 
+    joinDate: { type: String }, 
     knownLanguages: [{ type: String }], 
     readingInterests: [{ type: String }], 
 

@@ -1,6 +1,7 @@
 const bcryptjs = require('bcryptjs');
 const Volunteers = require('../../models/volunteers'); // تأكد من استيراد النماذج بشكل صحيح
 const Users = require('../../models/Users');
+const Files = require('../../models/Files');
 const appError = require('../../utils/handelError');
 const generateJwt = require('../../utils/genrateJWT');
 const {generateOTP}  = require('../../utils/generateOTP');
@@ -109,8 +110,10 @@ const createVolunteer = async (userId, filePath, telegramId, preferredRegistrati
         readingInterests, // مجالات القراءة
         completedFiles: [], // الملفات المنجزة
         pendingFiles: [], // الملفات غير المنجزة
-        waitingFiles: [] // الملفات المنتظرة
-    });
+        waitingFiles: [], // الملفات المنتظرة
+        specialties:registrationSection,
+        joinDate:new Date()
+      });
 
     try {
         await newVolunteer.save();
@@ -194,9 +197,11 @@ const volunteerRecord = await Volunteers.findOne({ userId: userId }).populate('c
     // استخراج البيانات المطلوبة لكل ملف مكتمل
     const completedFiles = volunteerRecord.completedFiles.map(file => ({
       id: file._id,
-      title: file.title,
+      file_type: file.file_type,
       description: file.description,
-      filePath: file.filePath // إضافة المسار الكامل للملف
+      filePath: file.filePath, // إضافة المسار الكامل للملف
+      uploadedAt:file.uploadedAt,
+      receivedAt:file.receivedAt
     }));
     
     // إرسال البيانات إلى العميل
@@ -230,9 +235,10 @@ const volunteerRecord = await Volunteers.findOne({ userId: userId }).populate('p
     // استخراج البيانات المطلوبة لكل ملف ملغى
     const canceledFiles = volunteerRecord.pendingFiles.map(file => ({
       id: file._id,
-      title: file.title,
+      file_type: file.file_type,
       description: file.description,
-      filePath: file.filePath // إضافة المسار الكامل للملف
+      filePath: file.filePath ,// إضافة المسار الكامل للملف
+      uploadedAt:file.uploadedAt
     }));
 
     // إرسال البيانات إلى العميل
@@ -261,15 +267,14 @@ const displayVolunteerWaitingFiles = async (req, res, next) => {
     const volunteerRecord = await Volunteers.findOne({ userId: userId })
       .populate({
         path: 'waitingFiles',
-        select: '_id file_type description filePath fileParts'
+        select: '_id file_type description filePath fileParts uploadedAt'
       });
 
 
     if (!volunteerRecord || !volunteerRecord.waitingFiles.length) {
-      return res.status(404).json({ status: false, message: 'لم يتم العثور على ملفات غير مكتملة لهذا المتطوع' });
+      return res.status(200).json({ status: true, message: 'لم يتم العثور على ملفات غير مكتملة لهذا المتطوع',data:[] });
     }
 
-    console.log(volunteerRecord);
 
     // استخراج البيانات المطلوبة لكل ملف غير مكتمل
     const waitingFiles = volunteerRecord.waitingFiles.map(file => ({
@@ -277,6 +282,7 @@ const displayVolunteerWaitingFiles = async (req, res, next) => {
       file_type: file.file_type,
       description: file.description,
       filePath: file.filePath,
+      uploadedAt:file.uploadedAt,
       file_name: file.fileParts.length > 0 ? file.fileParts[0].partName : 'غير متوفر'
     }));
 
@@ -391,9 +397,10 @@ const exportVolunteerStatistic = async (req, res, next) => {
 };
 
 // عند تسليم الملف لجعال ال status الخاصة بال user completed وجعل الملف اذا كل المتطوعين انهو عملهم ال status الرئيسية completed
+
 const updateFilePartStatus = async (fileId, volunteerId) => {
   try {
-    // تحديث حالة القسم الخاص بالمتطوع إلى 'completed'
+    // تحديث حالة الجزء الخاص بالمتطوع إلى 'completed'
     await Files.updateOne(
       { _id: fileId, "fileParts.assignedVolunteer": volunteerId },
       { $set: { "fileParts.$.status": "completed" } }
@@ -401,15 +408,30 @@ const updateFilePartStatus = async (fileId, volunteerId) => {
 
     // جلب الملف للتحقق من جميع أجزائه
     const fileEntry = await Files.findById(fileId);
-    
-    if (!fileEntry) return;
 
-    // التحقق مما إذا كانت جميع أجزاء الملف مكتملة
+    if (!fileEntry) {
+      console.error("الملف غير موجود");
+      return;
+    }
+
+    // التأكد من أن كل الأجزاء مكتملة
     const allPartsCompleted = fileEntry.fileParts.every(part => part.status === "completed");
 
     if (allPartsCompleted) {
       await Files.updateOne({ _id: fileId }, { $set: { status: "completed" } });
     }
+
+    // التأكد مما إذا كان المتطوع لديه ملفات غير مكتملة
+    const waitingFiles = await Files.findOne({
+      "fileParts.assignedVolunteer": volunteerId,
+      "fileParts.status": "pending"
+    });
+    console.log(waitingFiles);
+    
+    if (!waitingFiles) {
+      await Volunteers.updateOne({ userId: volunteerId }, { $set: { activeVolunteer: true } });
+    }
+
 
   } catch (error) {
     console.error("خطأ أثناء تحديث حالة القسم:", error.message);
@@ -452,6 +474,8 @@ const completeFileUpload = async (req, res, next) => {
     // // تنفيذ التحديث في الخلفية دون تعطيل العملية الرئيسية
     // setImmediate(() => updateFilePartStatus(fileId, volunteerId));
 
+    const voiceName = path.basename(filePath);
+    await Files.updateOne({_id:fileId},{voiceName:voiceName,receivedAt:new Date()})
 
     res.status(200).json({
       status: true,
