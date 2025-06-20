@@ -15,7 +15,7 @@ const XLSX = require('xlsx');
 // إعداد `multer` لرفع الملفات
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-      const uploadPath = 'uploads/';
+      const uploadPath = 'audio/';
       if (!fs.existsSync(uploadPath)) {
           fs.mkdirSync(uploadPath);
       }
@@ -442,9 +442,8 @@ const updateFilePartStatus = async (fileId, volunteerId) => {
 const completeFileUpload = async (req, res, next) => {
   try {
     const volunteerId = req.params.userId;
-    
-    // البحث عن المتطوع وجلب أول ملف في `waitingFiles`
     const volunteer = await Volunteers.findOne({ userId: volunteerId });
+
     if (!volunteer) {
       return res.status(404).json({ status: false, message: "المتطوع غير موجود" });
     }
@@ -452,23 +451,30 @@ const completeFileUpload = async (req, res, next) => {
     if (!volunteer.waitingFiles.length) {
       return res.status(400).json({ status: false, message: "لا توجد ملفات غير مكتملة للمتطوع" });
     }
+    if (!req.file) {
+      return res.status(400).json({ status: false, message: "لم يتم رفع ملف" });
+    }
+    const fileId = volunteer.waitingFiles[0];
+    const inputPath = req.file.path;
 
-    const fileId = volunteer.waitingFiles[0]; // اختيار أول ملف في القائمة
-    const filePath = req.file.path;
-    
-    console.log(filePath);
+    const compressedFilePath = inputPath.replace(path.extname(inputPath), '.mp3');
 
-    // تحديث بيانات المتطوع: إزالة الملف من `waitingFiles` وإضافته إلى `completedFiles`
-    await Volunteers.updateOne(
-      { userId: volunteerId },
-      {
-        $pull: { waitingFiles: fileId },
-        $push: { completedFiles: fileId }
-      }
-    );
+    ffmpeg(inputPath)
+      .audioCodec('libmp3lame')
+      .audioBitrate('128k')
+      .format('mp3')
+      .on('end', async () => {
+        fs.unlinkSync(inputPath); // حذف الملف الأصلي
 
-    // استدعاء تحديث حالة القسم للمتطوع بعد رفع الملف
-    await updateFilePartStatus(fileId, volunteerId);
+        await Volunteers.updateOne(
+          { userId: volunteerId },
+          {
+            $pull: { waitingFiles: fileId },
+            $push: { completedFiles: fileId }
+          }
+        );
+
+        await updateFilePartStatus(fileId, volunteerId);
 
     // في حال جعل الكود لاينتظر الاخر 
     // // تنفيذ التحديث في الخلفية دون تعطيل العملية الرئيسية
@@ -476,13 +482,20 @@ const completeFileUpload = async (req, res, next) => {
 
     const voiceName = path.basename(filePath);
     await Files.updateOne({_id:fileId},{voiceName:voiceName,receivedAt:new Date()})
+        const fileUrl = `http://localhost:${port}/${compressedFilePath.replace(/\\/g, '/')}`;
 
-    res.status(200).json({
-      status: true,
-      message: "تم تحميل الملف وإكمال المهمة بنجاح",
-      fileId: fileId,
-      filePath: filePath
-    });
+        res.status(200).json({
+          status: true,
+          message: "تم تحميل الملف و إكمال المهمة بنجاح",
+          fileId: fileId,
+          fileUrl: fileUrl
+        });
+      })
+      .on('error', (err) => {
+        console.error('خطأ أثناء الضغط:', err);
+        return next(appError.create('❌ حدث خطأ أثناء ضغط الملف', 500, false));
+      })
+      .save(compressedFilePath);
 
   } catch (error) {
     return next(appError.create(error.message, 400, false));
