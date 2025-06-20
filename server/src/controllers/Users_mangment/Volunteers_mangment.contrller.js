@@ -10,8 +10,8 @@ const multer = require("multer");
 const path = require('path');
 const fs = require("fs");
 const XLSX = require('xlsx');
-
-// fluent-ffmpeg
+const ffmpeg = require('fluent-ffmpeg');// fluent-ffmpeg
+// const ffmpegPath = require('ffmpeg-static');
 // إعداد `multer` لرفع الملفات
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -458,7 +458,8 @@ const completeFileUpload = async (req, res, next) => {
     const inputPath = req.file.path;
 
     const compressedFilePath = inputPath.replace(path.extname(inputPath), '.mp3');
-
+    
+    // ffmpeg.setFfmpegPath(ffmpegPath) ;
     ffmpeg(inputPath)
       .audioCodec('libmp3lame')
       .audioBitrate('128k')
@@ -483,7 +484,8 @@ const completeFileUpload = async (req, res, next) => {
     const voiceName = path.basename(filePath);
     await Files.updateOne({_id:fileId},{voiceName:voiceName,receivedAt:new Date()})
         const fileUrl = `http://localhost:${port}/${compressedFilePath.replace(/\\/g, '/')}`;
-
+        console.log(fileUrl , "sdfd",voiceName);
+        
         res.status(200).json({
           status: true,
           message: "تم تحميل الملف و إكمال المهمة بنجاح",
