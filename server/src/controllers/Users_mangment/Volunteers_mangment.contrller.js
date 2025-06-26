@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require("fs");
 const XLSX = require('xlsx');
 const ffmpeg = require('fluent-ffmpeg');// fluent-ffmpeg
+const { sendNotificationToUser } = require("../../utils/notificationService");
 // const ffmpegPath = require('ffmpeg-static');
 // إعداد `multer` لرفع الملفات
 const storage = multer.diskStorage({
@@ -419,6 +420,7 @@ const updateFilePartStatus = async (fileId, volunteerId) => {
 
     if (allPartsCompleted) {
       await Files.updateOne({ _id: fileId }, { $set: { status: "completed" } });
+      await sendNotificationToUser(fileEntry.assignedUsers._id, "اكتمل التسجيل", "تم اكمال تسجيل جميع الأجزاء الخاصة بملفك, رحلة تعلم سعيدة ❤️");
     }
 
     // التأكد مما إذا كان المتطوع لديه ملفات غير مكتملة
@@ -481,7 +483,7 @@ const completeFileUpload = async (req, res, next) => {
     // // تنفيذ التحديث في الخلفية دون تعطيل العملية الرئيسية
     // setImmediate(() => updateFilePartStatus(fileId, volunteerId));
 
-    const voiceName = path.basename(filePath);
+    const voiceName = path.basename(compressedFilePath);
     await Files.updateOne({_id:fileId},{voiceName:voiceName,receivedAt:new Date()})
         const fileUrl = `http://localhost:${port}/${compressedFilePath.replace(/\\/g, '/')}`;
         console.log(fileUrl , "sdfd",voiceName);

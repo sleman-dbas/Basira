@@ -1,6 +1,7 @@
 const express = require("express") ; 
 const cors = require('cors')
-const  mongoose  = require('mongoose');
+const mongoose = require('mongoose');
+const admin = require("firebase-admin");
 require('dotenv').config() ;
 
 const PORT = process.env.PORT || 3000 ; 
@@ -25,7 +26,11 @@ server.use(cors(corsOptions));
 server.use(express.urlencoded({ extended: true }));
 server.use('/uploads', express.static('uploads'));
 
-
+// إعداد Firebase Admin
+const serviceAccount = require("./fireBase/firebase-service-account.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 // Import routes
 const studntRouts = require('./routes/Users_mangment/Students_mangment.router'); 

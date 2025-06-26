@@ -68,7 +68,8 @@ const userSchema = new mongoose.Schema({
     isVolunteer: {
          type: Boolean,
          default: false
-    }, 
+    },
+    fcmToken: { type: String, default: null }
 });
 
 

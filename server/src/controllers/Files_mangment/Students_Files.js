@@ -9,7 +9,7 @@ const Volunteers = require('../../models/volunteers'); // جلب المخطط
 const { PDFDocument } = require('pdf-lib');
 const Users = require("../../models/Users");
 const crypto = require('crypto'); // لتوليد أسماء عشوائية
-
+const { sendNotificationToUser } = require("../../utils/notificationService");
 // إعداد `multer` لرفع الملفات
 const storage = multer.diskStorage({
 destination: function (req, file, cb) {
@@ -148,7 +148,7 @@ async selectVolunteer(file_specialty, isUrgent, file_id) {
             $inc: { completedHoursThisWeek: 1 },
             $push: { waitingFiles: file_id }
         });
-
+        await sendNotificationToUser(selected._id, "مادة جديدة للقراءة", "يوجد لديك ملف جديد لقرائته, هيا بنا نصنع الأمل ❤️");
         console.log(`✅ تم اختيار المتطوع: ${selected.telegramId} وأصبح غير متاح.`);
         return selected;
     } catch (error) {

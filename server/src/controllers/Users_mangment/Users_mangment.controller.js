@@ -306,3 +306,17 @@ module.exports.education_levels = async (req,res,next) => {
    
 };
    
+
+module.exports.saveFcmToken = async (req, res) => {
+  const { fcmToken } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const user = await Users.findByIdAndUpdate(userId, { fcmToken }, { new: true });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ message: "تم حفظ FCM Token بنجاح", user });
+  } catch (error) {
+    res.status(500).json({ message: "حدث خطأ أثناء حفظ التوكن", error: error.message });
+  }
+};

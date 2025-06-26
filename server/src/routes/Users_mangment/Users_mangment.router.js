@@ -6,6 +6,7 @@ const {localvariables} = require('../../utils/generateOTP')
 
 
 routes.route('/login').post(authUsers_controller.login);
+routes.route('/save-token').post(verify_token, authUsers_controller.saveFcmToken);
 routes.route('/generateOTP').post(localvariables,authUsers_controller.generateOTP);
 routes.route('/checkOTP').post(authUsers_controller.checkOTP);
 routes.route('/verifyOTP').post(authUsers_controller.verifyOTP);
