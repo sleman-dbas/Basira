@@ -420,7 +420,7 @@ const updateFilePartStatus = async (fileId, volunteerId) => {
 
     if (allPartsCompleted) {
       await Files.updateOne({ _id: fileId }, { $set: { status: "completed" } });
-      // await sendNotificationToUser(fileEntry.assignedUsers._id, "اكتمل التسجيل", "تم اكمال تسجيل جميع الأجزاء الخاصة بملفك, رحلة تعلم سعيدة ❤️");
+      await sendNotificationToUser(fileEntry.assignedUsers._id, "اكتمل التسجيل", "تم اكمال تسجيل جميع الأجزاء الخاصة بملفك, رحلة تعلم سعيدة ❤️");
     }
 
     // التأكد مما إذا كان المتطوع لديه ملفات غير مكتملة
