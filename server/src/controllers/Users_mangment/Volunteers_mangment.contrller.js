@@ -16,7 +16,7 @@ const { sendNotificationToUser } = require("../../utils/notificationService");
 // إعداد `multer` لرفع الملفات
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-      const uploadPath = 'audio/';
+      const uploadPath = 'voices/';
       if (!fs.existsSync(uploadPath)) {
           fs.mkdirSync(uploadPath);
       }
@@ -420,7 +420,7 @@ const updateFilePartStatus = async (fileId, volunteerId) => {
 
     if (allPartsCompleted) {
       await Files.updateOne({ _id: fileId }, { $set: { status: "completed" } });
-      await sendNotificationToUser(fileEntry.assignedUsers._id, "اكتمل التسجيل", "تم اكمال تسجيل جميع الأجزاء الخاصة بملفك, رحلة تعلم سعيدة ❤️");
+      // await sendNotificationToUser(fileEntry.assignedUsers._id, "اكتمل التسجيل", "تم اكمال تسجيل جميع الأجزاء الخاصة بملفك, رحلة تعلم سعيدة ❤️");
     }
 
     // التأكد مما إذا كان المتطوع لديه ملفات غير مكتملة
@@ -459,7 +459,7 @@ const completeFileUpload = async (req, res, next) => {
     const fileId = volunteer.waitingFiles[0];
     const inputPath = req.file.path;
 
-    const compressedFilePath = inputPath.replace(path.extname(inputPath), '.mp3');
+    const compressedFilePath = inputPath.replace(path.extname(inputPath), '-compressed.mp3');
     
     // ffmpeg.setFfmpegPath(ffmpegPath) ;
     ffmpeg(inputPath)
@@ -484,8 +484,9 @@ const completeFileUpload = async (req, res, next) => {
     // setImmediate(() => updateFilePartStatus(fileId, volunteerId));
 
     const voiceName = path.basename(compressedFilePath);
-    await Files.updateOne({_id:fileId},{voiceName:voiceName,receivedAt:new Date()})
-        const fileUrl = `http://localhost:${port}/${compressedFilePath.replace(/\\/g, '/')}`;
+        await Files.updateOne({ _id: fileId }, { voiceName: voiceName, receivedAt: new Date() })
+        const host = req.headers.host;
+        const fileUrl = `http://localhost:${host}/${compressedFilePath.replace(/\\/g, '/')}`;
         console.log(fileUrl , "sdfd",voiceName);
         
         res.status(200).json({
@@ -496,7 +497,7 @@ const completeFileUpload = async (req, res, next) => {
         });
       })
       .on('error', (err) => {
-        console.error('خطأ أثناء الضغط:', err);
+        console.log('خطأ أثناء الضغط:', err);
         return next(appError.create('❌ حدث خطأ أثناء ضغط الملف', 500, false));
       })
       .save(compressedFilePath);
